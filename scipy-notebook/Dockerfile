@@ -45,12 +45,6 @@ RUN conda create -p $CONDA_DIR/envs/python2 python=2.7 \
     pyzmq \
     && conda clean -yt
 
-RUN pip3 install xlrd bash_kernel elasticsearch arrow pyyaml py-dateutil
-RUN python3 -c "import bokeh.sampledata; bokeh.sampledata.download()"
-
-RUN pip3 install bash_kernel
-RUN python3 -m bash_kernel.install
-
 USER root
 
 # Install Python 2 kernel spec globally to avoid permission problems when NB_UID
