@@ -90,6 +90,12 @@ RUN MPLBACKEND=Agg $CONDA_DIR/envs/python2/bin/python -c "import matplotlib.pypl
 RUN mkdir -p $HOME/.ipython/profile_default/startup
 COPY mplimporthook.py $HOME/.ipython/profile_default/startup/
 
+RUN pip3 install xlrd bash_kernel elasticsearch arrow pyyaml py-dateutil
+RUN python3 -c "import bokeh.sampledata; bokeh.sampledata.download()"
+
+RUN pip3 install bash_kernel
+RUN python3 -m bash_kernel.install
+
 USER root
 
 # Install Python 2 kernel spec globally to avoid permission problems when NB_UID
