@@ -53,6 +53,13 @@ RUN python -m bash_kernel.install
 
 USER root
 
+# Migu 1M
+RUN wget "http://sourceforge.jp/frs/redir.php?m=iij&f=%2Fmix-mplus-ipa%2F59022%2Fmigu-1m-20130617.zip" -P /tmp \
+    && unzip "/tmp/redir.php?m=iij&f=%2Fmix-mplus-ipa%2F59022%2Fmigu-1m-20130617.zip" -d /tmp \
+    && mkdir -p /usr/share/fonts/truetype/migu \
+    && mv /tmp/migu-1m-20130617/*ttf /usr/share/fonts/truetype/migu \
+    && rm -r /tmp/*
+
 # Install Python 2 kernel spec globally to avoid permission problems when NB_UID
 # switching at runtime.
 RUN $CONDA_DIR/envs/python2/bin/python \
