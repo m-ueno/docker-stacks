@@ -60,9 +60,15 @@ RUN wget "http://sourceforge.jp/frs/redir.php?m=iij&f=%2Fmix-mplus-ipa%2F59022%2
     && mv /tmp/migu-1m-20130617/*ttf /usr/share/fonts/truetype/migu \
     && rm -r /tmp/*
 
+# IPA
+RUN wget http://dl.ipafont.ipa.go.jp/IPAexfont/ipaexg00301.zip -P /tmp \
+    && unzip /tmp/ipaexg00301.zip -d /tmp \
+    && mkdir -p /usr/share/fonts/truetype/ipa \
+    && mv /tmp/ipaexg00301/ipaexg.ttf /usr/share/fonts/truetype/ipa \
+    && rm -r /tmp/*
+    
 # Install Python 2 kernel spec globally to avoid permission problems when NB_UID
 # switching at runtime.
 RUN $CONDA_DIR/envs/python2/bin/python \
     $CONDA_DIR/envs/python2/bin/ipython \
     kernelspec install-self
-
