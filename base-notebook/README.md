@@ -1,16 +1,18 @@
-![docker pulls](https://img.shields.io/docker/pulls/jupyter/scipy-notebook.svg) ![docker stars](https://img.shields.io/docker/stars/jupyter/scipy-notebook.svg) [![](https://images.microbadger.com/badges/image/jupyter/scipy-notebook.svg)](https://microbadger.com/images/jupyter/scipy-notebook "jupyter/scipy-notebook image metadata")
+![docker pulls](https://img.shields.io/docker/pulls/jupyter/base-notebook.svg) ![docker stars](https://img.shields.io/docker/stars/jupyter/base-notebook.svg) [![](https://images.microbadger.com/badges/image/jupyter/base-notebook.svg)](https://microbadger.com/images/jupyter/base-notebook "jupyter/base-notebook image metadata")
 
-# Jupyter Notebook Scientific Python Stack
+# Base Jupyter Notebook Stack
+
+Small base image for defining your own stack
 
 ## What it Gives You
 
-* Jupyter Notebook 4.2.x
-* Conda Python 3.x and Python 2.7.x environments
-* pandas, matplotlib, scipy, seaborn, scikit-learn, scikit-image, sympy, cython, patsy, statsmodel, cloudpickle, dill, numba, bokeh, vincent, beautifulsoup, xlrd pre-installed
+* Minimally-functional Jupyter Notebook 4.2.x (e.g., no pandoc for document conversion)
+* Miniconda Python 3.x
+* No preinstalled scientific computing packages
 * Unprivileged user `jovyan` (uid=1000, configurable, see options) in group `users` (gid=100) with ownership over `/home/jovyan` and `/opt/conda`
-* [tini](https://github.com/krallin/tini) as the container entrypoint and [start-notebook.sh](../base-notebook/start-notebook.sh) as the default command
-* A [start-singleuser.sh](../base-notebook/start-singleuser.sh) script useful for running a single-user instance of the Notebook server, as required by JupyterHub
-* A [start.sh](../base-notebook/start.sh) script useful for running alternative commands in the container (e.g. `ipython`, `jupyter kernelgateway`, `jupyter lab`)
+* [tini](https://github.com/krallin/tini) as the container entrypoint and [start-notebook.sh](./start-notebook.sh) as the default command
+* A [start-singleuser.sh](./start-singleuser.sh) script useful for running a single-user instance of the Notebook server, as required by JupyterHub
+* A [start.sh](./start.sh) script useful for running alternative commands in the container (e.g. `ipython`, `jupyter kernelgateway`, `jupyter lab`)
 * Options for HTTPS, password auth, and passwordless `sudo`
 
 ## Basic Use
@@ -18,31 +20,30 @@
 The following command starts a container with the Notebook server listening for HTTP connections on port 8888 without authentication configured.
 
 ```
-docker run -d -p 8888:8888 jupyter/scipy-notebook
+docker run -d -p 8888:8888 jupyter/base-notebook
 ```
 
 ## Notebook Options
 
-The Docker container executes a [`start-notebook.sh` script](../base-notebook/start-notebook.sh) script by default. The `start-notebook.sh` script handles the `NB_UID` and `GRANT_SUDO` features documented in the next section, and then executes the `jupyter notebook`.
+The Docker container executes a [`start-notebook.sh` script](./start-notebook.sh) script by default. The `start-notebook.sh` script handles the `NB_UID` and `GRANT_SUDO` features documented in the next section, and then executes the `jupyter notebook`.
 
 You can pass [Jupyter command line options](https://jupyter.readthedocs.io/en/latest/projects/jupyter-command.html) through the `start-notebook.sh` script when launching the container. For example, to secure the Notebook server with a password hashed using `IPython.lib.passwd()`, run the following:
 
 ```
-docker run -d -p 8888:8888 jupyter/scipy-notebook start-notebook.sh --NotebookApp.password='sha1:74ba40f8a388:c913541b7ee99d15d5ed31d4226bf7838f83a50e'
+docker run -d -p 8888:8888 jupyter/base-notebook start-notebook.sh --NotebookApp.password='sha1:74ba40f8a388:c913541b7ee99d15d5ed31d4226bf7838f83a50e'
 ```
 
 For example, to set the base URL of the notebook server, run the following:
 
 ```
-docker run -d -p 8888:8888 jupyter/scipy-notebook start-notebook.sh --NotebookApp.base_url=/some/path
+docker run -d -p 8888:8888 jupyter/base-notebook start-notebook.sh --NotebookApp.base_url=/some/path
 ```
 
 You can sidestep the `start-notebook.sh` script and run your own commands in the container. See the *Alternative Commands* section later in this document for more information.
 
-
 ## Docker Options
 
-You may customize the execution of the Docker container and the Notebook server it contains with the following optional arguments.
+You may customize the execution of the Docker container and the command it is running with the following optional arguments.
 
 * `-e PASSWORD="YOURPASS"` - Configures Jupyter Notebook to require the given plain-text password. Should be combined with `USE_HTTPS` on untrusted networks. **Note** that this option is not as secure as passing a pre-hashed password on the command line as shown above.
 * `-e USE_HTTPS=yes` - Configures Jupyter Notebook to accept encrypted HTTPS connections. If a `pem` file containing a SSL certificate and key is not provided (see below), the container will generate a self-signed certificate for you.
@@ -63,31 +64,9 @@ For additional information about using SSL, see the following:
 * The [jupyter_notebook_config.py](jupyter_notebook_config.py) file for how this Docker image generates a self-signed certificate.
 * The [Jupyter Notebook documentation](https://jupyter-notebook.readthedocs.io/en/latest/public_server.html#using-ssl-for-encrypted-communication) for best practices about running a public notebook server in general, most of which are encoded in this image.
 
-## Conda Environments
+## Conda Environment
 
-The default Python 3.x [Conda environment](http://conda.pydata.org/docs/using/envs.html) resides in `/opt/conda`. A second Python 2.x Conda environment exists in `/opt/conda/envs/python2`. You can [switch to the python2 environment](http://conda.pydata.org/docs/using/envs.html#change-environments-activate-deactivate) in a shell by entering the following:
-
-```
-source activate python2
-```
-
-You can return to the default environment with this command:
-
-```
-source deactivate
-```
-
-The commands `jupyter`, `ipython`, `python`, `pip`, `easy_install`, and `conda` (among others) are available in both environments. For convenience, you can install packages into either environment regardless of what environment is currently active using commands like the following:
-
-```
-# install a package into the python2 environment
-pip2 install some-package
-conda install -n python2 some-package
-
-# install a package into the default (python 3.x) environment
-pip3 install some-package
-conda install -n python3 some-package
-```
+The default Python 3.x [Conda environment](http://conda.pydata.org/docs/using/envs.html) resides in `/opt/conda`. The commands `ipython`, `python`, `pip`, `easy_install`, and `conda` (among others) are available in this environment.
 
 ## Alternative Commands
 
@@ -97,7 +76,7 @@ conda install -n python3 some-package
 
 ```python
 # Spawn user containers from this image
-c.DockerSpawner.container_image = 'jupyter/scipy-notebook'
+c.DockerSpawner.container_image = 'jupyter/base-notebook'
 
 # Have the Spawner override the Docker run command
 c.DockerSpawner.extra_create_kwargs.update({
@@ -110,7 +89,7 @@ c.DockerSpawner.extra_create_kwargs.update({
 The `start.sh` script supports the same features as the default `start-notebook.sh` script (e.g., `GRANT_SUDO`), but allows you to specify an arbitrary command to execute. For example, to run the text-based `ipython` console in a container, do the following:
 
 ```
-docker run -it --rm jupyter/scipy-notebook start.sh ipython
+docker run -it --rm jupyter/base-notebook start.sh ipython
 ```
 
 This script is particularly useful when you derive a new Dockerfile from this image and install additional Jupyter applications with subcommands like `jupyter console`, `jupyter kernelgateway`, and `jupyter lab`.

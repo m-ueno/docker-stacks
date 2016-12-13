@@ -1,61 +1,43 @@
 # Copyright (c) Jupyter Development Team.
-FROM jupyter/minimal-notebook
+# Distributed under the terms of the Modified BSD License.
+FROM jupyter/scipy-notebook
 
 MAINTAINER Jupyter Project <jupyter@googlegroups.com>
 
 USER root
 
 # Spark dependencies
-ENV APACHE_SPARK_VERSION 1.5.1
-RUN apt-get -y update && \
-    apt-get install -y --no-install-recommends openjdk-7-jre-headless && \
-    apt-get clean
-RUN wget -qO - http://d3kbcqa49mib13.cloudfront.net/spark-${APACHE_SPARK_VERSION}-bin-hadoop2.6.tgz | tar -xz -C /usr/local/
-RUN cd /usr/local && ln -s spark-${APACHE_SPARK_VERSION}-bin-hadoop2.6 spark
+ENV APACHE_SPARK_VERSION 2.0.2
+ENV HADOOP_VERSION 2.7
+
+# Temporarily add jessie backports to get openjdk 8, but then remove that source
+RUN echo 'deb http://cdn-fastly.deb.debian.org/debian jessie-backports main' > /etc/apt/sources.list.d/jessie-backports.list && \
+    apt-get -y update && \
+    apt-get install -y --no-install-recommends openjdk-8-jre-headless && \
+    rm /etc/apt/sources.list.d/jessie-backports.list && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+RUN cd /tmp && \
+        wget -q http://d3kbcqa49mib13.cloudfront.net/spark-${APACHE_SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz && \
+        echo "e6349dd38ded84831e3ff7d391ae7f2525c359fb452b0fc32ee2ab637673552a *spark-${APACHE_SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz" | sha256sum -c - && \
+        tar xzf spark-${APACHE_SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz -C /usr/local && \
+        rm spark-${APACHE_SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz
+RUN cd /usr/local && ln -s spark-${APACHE_SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} spark
 
 # Mesos dependencies
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF && \
     DISTRO=debian && \
-    CODENAME=wheezy && \
+    CODENAME=jessie && \
     echo "deb http://repos.mesosphere.io/${DISTRO} ${CODENAME} main" > /etc/apt/sources.list.d/mesosphere.list && \
     apt-get -y update && \
-    apt-get --no-install-recommends -y --force-yes install mesos=0.22.1-1.0.debian78 && \
-    apt-get clean
+    apt-get --no-install-recommends -y --force-yes install mesos=0.25.0-0.2.70.debian81 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Spark and Mesos pointers
+# Spark and Mesos config
 ENV SPARK_HOME /usr/local/spark
-ENV PYTHONPATH $SPARK_HOME/python:$SPARK_HOME/python/lib/py4j-0.8.2.1-src.zip
+ENV PYTHONPATH $SPARK_HOME/python:$SPARK_HOME/python/lib/py4j-0.10.3-src.zip
 ENV MESOS_NATIVE_LIBRARY /usr/local/lib/libmesos.so
+ENV SPARK_OPTS --driver-java-options=-Xms1024M --driver-java-options=-Xmx4096M --driver-java-options=-Dlog4j.logLevel=info
 
-USER jovyan
-
-# Install Python 3 packages
-RUN conda install --yes \
-    'ipywidgets=4.0*' \
-    'pandas=0.16*' \
-    'matplotlib=1.4*' \
-    'scipy=0.15*' \
-    'seaborn=0.6*' \
-    'scikit-learn=0.16*' \
-    && conda clean -yt
-
-# Install Python 2 packages and kernel spec
-RUN conda create -p $CONDA_DIR/envs/python2 python=2.7 \
-    'ipython=4.0*' \
-    'ipywidgets=4.0*' \
-    'pandas=0.16*' \
-    'matplotlib=1.4*' \
-    'scipy=0.15*' \
-    'seaborn=0.6*' \
-    'scikit-learn=0.16*' \
-    pyzmq \
-    && conda clean -yt
-
-USER root
-
-# Install Python 2 kernel spec globally to avoid permission problems when NB_UID
-# switching at runtime.
-RUN $CONDA_DIR/envs/python2/bin/python \
-    $CONDA_DIR/envs/python2/bin/ipython \
-    kernelspec install-self
-
+USER $NB_USER

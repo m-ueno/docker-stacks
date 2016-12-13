@@ -1,24 +1,35 @@
-![docker pulls](https://img.shields.io/docker/pulls/jupyter/scipy-notebook.svg) ![docker stars](https://img.shields.io/docker/stars/jupyter/scipy-notebook.svg) [![](https://images.microbadger.com/badges/image/jupyter/scipy-notebook.svg)](https://microbadger.com/images/jupyter/scipy-notebook "jupyter/scipy-notebook image metadata")
+![docker pulls](https://img.shields.io/docker/pulls/jupyter/tensorflow-notebook.svg) ![docker stars](https://img.shields.io/docker/stars/jupyter/tensorflow-notebook.svg) [![](https://images.microbadger.com/badges/image/jupyter/tensorflow-notebook.svg)](https://microbadger.com/images/jupyter/tensorflow-notebook "jupyter/tensorflow-notebook image metadata")
 
-# Jupyter Notebook Scientific Python Stack
+# Jupyter Notebook Scientific Python Stack + Tensorflow
 
 ## What it Gives You
 
-* Jupyter Notebook 4.2.x
-* Conda Python 3.x and Python 2.7.x environments
-* pandas, matplotlib, scipy, seaborn, scikit-learn, scikit-image, sympy, cython, patsy, statsmodel, cloudpickle, dill, numba, bokeh, vincent, beautifulsoup, xlrd pre-installed
-* Unprivileged user `jovyan` (uid=1000, configurable, see options) in group `users` (gid=100) with ownership over `/home/jovyan` and `/opt/conda`
-* [tini](https://github.com/krallin/tini) as the container entrypoint and [start-notebook.sh](../base-notebook/start-notebook.sh) as the default command
-* A [start-singleuser.sh](../base-notebook/start-singleuser.sh) script useful for running a single-user instance of the Notebook server, as required by JupyterHub
-* A [start.sh](../base-notebook/start.sh) script useful for running alternative commands in the container (e.g. `ipython`, `jupyter kernelgateway`, `jupyter lab`)
-* Options for HTTPS, password auth, and passwordless `sudo`
+* Everything in [Scipy Notebook](https://github.com/jupyter/docker-stacks/tree/master/scipy-notebook)
+* Tensorflow for Python 2.7 and 3.5 (without GPU support)
+
 
 ## Basic Use
 
 The following command starts a container with the Notebook server listening for HTTP connections on port 8888 without authentication configured.
 
 ```
-docker run -d -p 8888:8888 jupyter/scipy-notebook
+docker run -d -p 8888:8888 jupyter/tensorflow-notebook
+```
+
+## Tensorflow Single Machine Mode
+
+As distributed tensorflow is still immature, we currently only provide the single machine mode.
+
+```
+import tensorflow as tf
+
+hello = tf.Variable('Hello World!')
+
+sess = tf.Session()
+init = tf.initialize_all_variables()
+
+sess.run(init)
+sess.run(hello)
 ```
 
 ## Notebook Options
@@ -28,13 +39,13 @@ The Docker container executes a [`start-notebook.sh` script](../base-notebook/st
 You can pass [Jupyter command line options](https://jupyter.readthedocs.io/en/latest/projects/jupyter-command.html) through the `start-notebook.sh` script when launching the container. For example, to secure the Notebook server with a password hashed using `IPython.lib.passwd()`, run the following:
 
 ```
-docker run -d -p 8888:8888 jupyter/scipy-notebook start-notebook.sh --NotebookApp.password='sha1:74ba40f8a388:c913541b7ee99d15d5ed31d4226bf7838f83a50e'
+docker run -d -p 8888:8888 jupyter/tensorflow-notebook start-notebook.sh --NotebookApp.password='sha1:74ba40f8a388:c913541b7ee99d15d5ed31d4226bf7838f83a50e'
 ```
 
 For example, to set the base URL of the notebook server, run the following:
 
 ```
-docker run -d -p 8888:8888 jupyter/scipy-notebook start-notebook.sh --NotebookApp.base_url=/some/path
+docker run -d -p 8888:8888 jupyter/tensorflow-notebook start-notebook.sh --NotebookApp.base_url=/some/path
 ```
 
 You can sidestep the `start-notebook.sh` script and run your own commands in the container. See the *Alternative Commands* section later in this document for more information.
@@ -97,7 +108,7 @@ conda install -n python3 some-package
 
 ```python
 # Spawn user containers from this image
-c.DockerSpawner.container_image = 'jupyter/scipy-notebook'
+c.DockerSpawner.container_image = 'jupyter/tensorflow-notebook'
 
 # Have the Spawner override the Docker run command
 c.DockerSpawner.extra_create_kwargs.update({
@@ -110,7 +121,7 @@ c.DockerSpawner.extra_create_kwargs.update({
 The `start.sh` script supports the same features as the default `start-notebook.sh` script (e.g., `GRANT_SUDO`), but allows you to specify an arbitrary command to execute. For example, to run the text-based `ipython` console in a container, do the following:
 
 ```
-docker run -it --rm jupyter/scipy-notebook start.sh ipython
+docker run -it --rm jupyter/tensorflow-notebook start.sh ipython
 ```
 
 This script is particularly useful when you derive a new Dockerfile from this image and install additional Jupyter applications with subcommands like `jupyter console`, `jupyter kernelgateway`, and `jupyter lab`.

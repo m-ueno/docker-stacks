@@ -58,3 +58,10 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# Mac OS X
+.DS_Store
+
+dockerspawner
+dockerspawner.tar.gz
+*.orig

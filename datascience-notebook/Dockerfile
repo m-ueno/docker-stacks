@@ -1,4 +1,6 @@
-FROM jupyter/minimal-notebook
+# Copyright (c) Jupyter Development Team.
+# Distributed under the terms of the Modified BSD License.
+FROM jupyter/scipy-notebook
 
 MAINTAINER Jupyter Project <jupyter@googlegroups.com>
 
@@ -7,99 +9,57 @@ USER root
 # R pre-requisites
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    libxrender1 \
     fonts-dejavu \
     gfortran \
-    gcc && apt-get clean
+    gcc && apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Julia dependencies
-RUN apt-get update && \
+RUN echo "deb http://ppa.launchpad.net/staticfloat/juliareleases/ubuntu trusty main" > /etc/apt/sources.list.d/julia.list && \
+    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3D3D3ACC && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
     julia \
-    libnettle4 && apt-get clean
+    libnettle4 && apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-USER jovyan
-
-# Install Python 3 packages
-RUN conda install --yes \
-    'ipywidgets=4.0*' \
-    'pandas=0.16*' \
-    'matplotlib=1.4*' \
-    'scipy=0.15*' \
-    'seaborn=0.6*' \
-    'scikit-learn=0.16*' \
-    'scikit-image=0.11*' \
-    'sympy=0.7*' \
-    'cython=0.22*' \
-    'patsy=0.3*' \
-    'statsmodels=0.6*' \
-    'cloudpickle=0.1*' \
-    'dill=0.2*' \
-    'numba=0.20*' \
-    'bokeh=0.9*' \
-    && conda clean -yt
-
-# Install Python 2 packages
-RUN conda create -p $CONDA_DIR/envs/python2 python=2.7 \
-    'ipython=4.0*' \
-    'ipywidgets=4.0*' \
-    'pandas=0.16*' \
-    'matplotlib=1.4*' \
-    'scipy=0.15*' \
-    'seaborn=0.6*' \
-    'scikit-learn=0.16*' \
-    'scikit-image=0.11*' \
-    'sympy=0.7*' \
-    'cython=0.22*' \
-    'patsy=0.3*' \
-    'statsmodels=0.6*' \
-    'cloudpickle=0.1*' \
-    'dill=0.2*' \
-    'numba=0.20*' \
-    'bokeh=0.9*' \
-    pyzmq \
-    && conda clean -yt
+USER $NB_USER
 
 # R packages including IRKernel which gets installed globally.
-RUN conda config --add channels r
-RUN conda install --yes \
-    'r-base=3.2*' \
-    'r-irkernel=0.4*' \
+# Pin r-base to a specific build number for https://github.com/jupyter/docker-stacks/issues/210#issuecomment-246081809
+RUN conda config --add channels r && \
+    conda install --quiet --yes \
+    'rpy2=2.8*' \
+    'r-base=3.3.1 1' \
+    'r-irkernel=0.7*' \
     'r-plyr=1.8*' \
-    'r-devtools=1.8*' \
+    'r-devtools=1.11*' \
     'r-dplyr=0.4*' \
-    'r-ggplot2=1.0*' \
-    'r-tidyr=0.2*' \
-    'r-shiny=0.12*' \
-    'r-rmarkdown=0.7*' \
-    'r-forecast=5.8*' \
-    'r-stringr=0.6*' \
+    'r-ggplot2=2.1*' \
+    'r-tidyr=0.5*' \
+    'r-shiny=0.13*' \
+    'r-rmarkdown=0.9*' \
+    'r-forecast=7.1*' \
+    'r-stringr=1.0*' \
     'r-rsqlite=1.0*' \
     'r-reshape2=1.4*' \
-    'r-nycflights13=0.1*' \
+    'r-nycflights13=0.2*' \
     'r-caret=6.0*' \
     'r-rcurl=1.95*' \
-    'r-randomforest=4.6*' && conda clean -yt
-
-# WORKAROUND: symlink version of zmq required by latest rzmq back into conda lib
-# https://github.com/jupyter/docker-stacks/issues/55
-RUN ln -s /opt/conda/pkgs/zeromq-4.0.*/lib/libzmq.so.4.* /opt/conda/lib/libzmq.so.4 
-RUN ln -s /opt/conda/pkgs/libsodium-0.4.*/lib/libsodium.so.4.* /opt/conda/lib/libsodium.so.4
+    'r-randomforest=4.6*' && conda clean -tipsy
 
 # Install IJulia packages as jovyan and then move the kernelspec out
-# to the system share location. Avoids problems with runtime UID change not 
+# to the system share location. Avoids problems with runtime UID change not
 # taking effect properly on the .local folder in the jovyan home dir.
 RUN julia -e 'Pkg.add("IJulia")' && \
-    mv /home/$NB_USER/.local/share/jupyter/kernels/* $CONDA_DIR/share/jupyter/kernels/ && \
+    mv $HOME/.local/share/jupyter/kernels/julia* $CONDA_DIR/share/jupyter/kernels/ && \
     chmod -R go+rx $CONDA_DIR/share/jupyter && \
-    rm -rf /home/$NB_USER/.local/share
-RUN julia -e 'Pkg.add("Gadfly")' && julia -e 'Pkg.add("RDatasets")'
+    rm -rf $HOME/.local
 
-USER root
+# Show Julia where conda libraries are
+# Add essential packages
+RUN echo "push!(Libdl.DL_LOAD_PATH, \"$CONDA_DIR/lib\")" > /home/$NB_USER/.juliarc.jl && \
+    julia -e 'Pkg.add("Gadfly")' && julia -e 'Pkg.add("RDatasets")' && julia -F -e 'Pkg.add("HDF5")'
 
-# Install Python 2 kernel spec globally to avoid permission problems when NB_UID
-# switching at runtime.
-RUN $CONDA_DIR/envs/python2/bin/python \
-    $CONDA_DIR/envs/python2/bin/ipython \
-    kernelspec install-self
-
+# Precompile Julia pakcages
+RUN julia -e 'using IJulia' && julia -e 'using Gadfly' && julia -e 'using RDatasets'&& julia -e 'using HDF5'
